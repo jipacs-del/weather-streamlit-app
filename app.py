@@ -36,7 +36,7 @@ def log_search(city, temp, hum, wind):
 
 init_db()
 
-# --- API Függvények Cache-eléssel és újrapróbálkozással ---
+# --- API Függvények Cache-eléssel ---
 @st.cache_data(ttl=600)
 def get_coordinates(city_name):
     host = ".".join(["geocoding-api", "open-meteo", "com"])
@@ -121,5 +121,5 @@ if city_input:
         else:
             st.warning(f"Nem található ilyen város: '{city_input}'.")
             
-    except Exception:
-        st.warning("Hiba történt az adatok lekérése közben az API-ról (túl sok kérés, próbáld újra egy perc múlva).")
+    except Exception as e:
+        st.warning(f"Hiba történt az adatok lekérése közben: {e}")
