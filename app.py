@@ -35,7 +35,8 @@ def log_search(city, temp, hum, wind):
 
 init_db()
 
-# --- API Függvények ---
+# --- API Függvények Cache-eléssel (429-es hiba elkerülésére) ---
+@st.cache_data(ttl=600)
 def get_coordinates(city_name):
     host = ".".join(["geocoding-api", "open-meteo", "com"])
     url = f"https://{host}/v1/search"
@@ -48,10 +49,10 @@ def get_coordinates(city_name):
             res = data["results"][0]
             return res["latitude"], res["longitude"], res["name"], res.get("country", "")
         return None
-    except Exception as e:
-        st.error(f"Geocoding hiba: {e}")
+    except Exception:
         return None
 
+@st.cache_data(ttl=600)
 def get_weather_data(lat, lon):
     host = ".".join(["api", "open-meteo", "com"])
     url = f"https://{host}/v1/forecast"
@@ -67,8 +68,7 @@ def get_weather_data(lat, lon):
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         return response.json()
-    except Exception as e:
-        st.error(f"Weather API hiba: {e}")
+    except Exception:
         return None
 
 # --- Felhasználói felület (UI) ---
@@ -114,6 +114,6 @@ if city_input:
             
             st.line_chart(forecast_df["Temperature"])
         else:
-            st.warning("Hiba történt az időjárási adatok lekérése közben az API-ról.")
+            st.warning("Hiba történt az időjárási adatok lekérése közben az API-ról (túl sok kérés, próbáld újra 1 perc múlva).")
     else:
         st.warning(f"Nem található ilyen város ('{city_input}'), vagy hiba történt a keresés során.")
