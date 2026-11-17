@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import sqlite3
+import time
 from datetime import datetime
 
 st.set_page_config(page_title="Weather App", layout="wide")
@@ -35,22 +36,22 @@ def log_search(city, temp, hum, wind):
 
 init_db()
 
-# --- API Függvények Cache-eléssel (429-es hiba elkerülésére) ---
+# --- API Függvények Cache-eléssel és újrapróbálkozással ---
 @st.cache_data(ttl=600)
 def get_coordinates(city_name):
     host = ".".join(["geocoding-api", "open-meteo", "com"])
     url = f"https://{host}/v1/search"
     params = {"name": city_name, "count": 1, "language": "en", "format": "json"}
-    try:
+    for _ in range(3):
         response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        if "results" in data and len(data["results"]) > 0:
-            res = data["results"][0]
-            return res["latitude"], res["longitude"], res["name"], res.get("country", "")
-        return None
-    except Exception:
-        return None
+        if response.status_code == 200:
+            data = response.json()
+            if "results" in data and len(data["results"]) > 0:
+                res = data["results"][0]
+                return res["latitude"], res["longitude"], res["name"], res.get("country", "")
+            return None
+        time.sleep(2)
+    raise Exception("Geocoding API limit elérve")
 
 @st.cache_data(ttl=600)
 def get_weather_data(lat, lon):
@@ -64,12 +65,12 @@ def get_weather_data(lat, lon):
         "forecast_days": 5,
         "timezone": "auto"
     }
-    try:
+    for _ in range(3):
         response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        return response.json()
-    except Exception:
-        return None
+        if response.status_code == 200:
+            return response.json()
+        time.sleep(2)
+    raise Exception("Weather API limit elérve")
 
 # --- Felhasználói felület (UI) ---
 st.title("Robot Dreams Python - Weather Map & Data Visualization App")
@@ -77,27 +78,31 @@ st.title("Robot Dreams Python - Weather Map & Data Visualization App")
 city_input = st.text_input("Enter city name", value="Diósd")
 
 if city_input:
-    geo_data = get_coordinates(city_input)
-    
-    if geo_data:
-        lat, lon, exact_city, country = geo_data
-        weather_data = get_weather_data(lat, lon)
+    try:
+        geo_data = get_coordinates(city_input)
         
-        if weather_data:
+        if geo_data:
+            lat, lon, exact_city, country = geo_data
+            weather_data = get_weather_data(lat, lon)
+            
             current = weather_data["current"]
             temp = current["temperature_2m"]
             hum = current["relative_humidity_2m"]
             wind = current["wind_speed_10m"]
             
+            # Adatok mentése az SQLite adatbázisba
             log_search(exact_city, temp, hum, wind)
             
+            # Dinamikus fejléc
             st.header(f"Current Weather in {exact_city}, {country}")
             
+            # KPI-ok megjelenítése
             col1, col2, col3 = st.columns(3)
             col1.metric("Temperature (°C)", f"{temp}°C")
             col2.metric("Humidity (%)", f"{hum}%")
             col3.metric("Wind Speed (km/h)", f"{wind} km/h")
             
+            # Térkép megjelenítése
             st.subheader("Weather Map")
             map_df = pd.DataFrame({"lat": [lat], "lon": [lon]})
             st.map(map_df, zoom=11)
@@ -114,6 +119,7 @@ if city_input:
             
             st.line_chart(forecast_df["Temperature"])
         else:
-            st.warning("Hiba történt az időjárási adatok lekérése közben az API-ról (túl sok kérés, próbáld újra 1 perc múlva).")
-    else:
-        st.warning(f"Nem található ilyen város ('{city_input}'), vagy hiba történt a keresés során.")
+            st.warning(f"Nem található ilyen város: '{city_input}'.")
+            
+    except Exception:
+        st.warning("Hiba történt az adatok lekérése közben az API-ról (túl sok kérés, próbáld újra egy perc múlva).")
