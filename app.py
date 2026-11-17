@@ -37,7 +37,7 @@ init_db()
 
 # --- API Függvények ---
 def get_coordinates(city_name):
-    url = "https://" + "://open-meteo.com"
+    url = "https://" + "open-meteo.com"
     params = {"name": city_name, "count": 1, "language": "en", "format": "json"}
     try:
         response = requests.get(url, params=params, timeout=10)
@@ -52,7 +52,7 @@ def get_coordinates(city_name):
         return None
 
 def get_weather_data(lat, lon):
-    url = "https://" + "://open-meteo.com"
+    url = "https://" + "open-meteo.com"
     params = {
         "latitude": lat,
         "longitude": lon,
