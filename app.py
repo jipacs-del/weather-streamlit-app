@@ -37,11 +37,10 @@ init_db()
 
 # --- API Függvények ---
 def get_coordinates(city_name):
-    url = "https://open-meteo.com"
+    url = "https://" + "://open-meteo.com"
     params = {"name": city_name, "count": 1, "language": "en", "format": "json"}
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
         if "results" in data and len(data["results"]) > 0:
@@ -53,7 +52,7 @@ def get_coordinates(city_name):
         return None
 
 def get_weather_data(lat, lon):
-    url = "https://open-meteo.com"
+    url = "https://" + "://open-meteo.com"
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -62,9 +61,8 @@ def get_weather_data(lat, lon):
         "forecast_days": 5,
         "timezone": "auto"
     }
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
     try:
-        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         return response.json()
     except Exception as e:
