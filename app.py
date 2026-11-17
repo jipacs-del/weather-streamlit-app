@@ -37,7 +37,8 @@ init_db()
 
 # --- API Függvények ---
 def get_coordinates(city_name):
-    url = "https://" + "://open-meteo.com"
+    host = ".".join(["geocoding-api", "open-meteo", "com"])
+    url = f"https://{host}/v1/search"
     params = {"name": city_name, "count": 1, "language": "en", "format": "json"}
     try:
         response = requests.get(url, params=params, timeout=10)
@@ -52,7 +53,8 @@ def get_coordinates(city_name):
         return None
 
 def get_weather_data(lat, lon):
-    url = "https://" + "://open-meteo.com"
+    host = ".".join(["api", "open-meteo", "com"])
+    url = f"https://{host}/v1/forecast"
     params = {
         "latitude": lat,
         "longitude": lon,
